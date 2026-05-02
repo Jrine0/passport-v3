@@ -14,10 +14,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import {
   buildIssuePayload,
+  getConnectedWalletAddress,
+  getWalletLabel,
+  getWalletStatus,
   generatePassportId,
   generateQrValue,
   passportTypes,
   shortenAddress,
+  submitPassportInvocation,
   type PassportUseCase,
   type WalletName,
 } from "@/lib/passport"
@@ -47,30 +51,27 @@ export default function MintPage() {
     const walletName = window.localStorage.getItem("passport-wallet") as WalletName | null
     if (!walletName) return
 
-    const wallet = walletName === "petra" ? window.aptos : window.martian
-    const address = wallet?.account?.address ?? wallet?.address
-
-    if (address) {
-      setActiveWallet({ name: walletName, address })
-      setOwnerAddress(address)
+    const status = getWalletStatus(walletName)
+    if (status) {
+      setActiveWallet({ name: status.name, address: status.address })
+      setOwnerAddress(status.address)
     }
   }, [])
 
   const handleIssue = async () => {
     if (!ownerAddress.trim()) {
-      setError("Enter the passport holder's Aptos address.")
+      setError("Enter the passport holder's Stellar address.")
       return
     }
 
     const walletName = window.localStorage.getItem("passport-wallet") as WalletName | null
 
     if (!walletName) {
-      setError("Connect Petra or Martian before issuing a passport.")
+      setError("Connect Freighter or Albedo before issuing a passport.")
       return
     }
 
-    const connectedWallet = walletName === "petra" ? window.aptos : window.martian
-    const issuerAddress = connectedWallet?.account?.address ?? connectedWallet?.address
+    const issuerAddress = getConnectedWalletAddress(walletName)
 
     if (!issuerAddress) {
       setError("The connected wallet did not expose an address.")
@@ -84,6 +85,10 @@ export default function MintPage() {
       const passportId = generatePassportId()
       const qrValue = generateQrValue(passportId)
       const validityDaysNumber = Number(validityDays)
+      if (!Number.isFinite(validityDaysNumber) || validityDaysNumber <= 0) {
+        setError("Validity days must be greater than zero.")
+        return
+      }
       const expiryDate = new Date(Date.now() + validityDaysNumber * 24 * 60 * 60 * 1000).toISOString()
       const payload = buildIssuePayload({
         owner: ownerAddress,
@@ -97,15 +102,8 @@ export default function MintPage() {
         notes,
       })
 
-      let transactionHash = `draft-${passportId}`
-
-      if (connectedWallet?.signAndSubmitTransaction) {
-        const submission = await connectedWallet.signAndSubmitTransaction({
-          data: payload,
-        })
-
-        transactionHash = submission?.hash ?? submission?.transactionHash ?? transactionHash
-      }
+      const submission = await submitPassportInvocation(walletName, payload)
+      const transactionHash = submission.transactionHash ?? `draft-${passportId}`
 
       setResult({
         passportId,
@@ -137,7 +135,7 @@ export default function MintPage() {
               <p className="text-base font-semibold">Issuance console</p>
             </div>
           </Link>
-          <Badge variant="outline">Aptos Move issuance</Badge>
+          <Badge variant="outline">Stellar Soroban issuance</Badge>
         </div>
       </header>
 
@@ -146,10 +144,10 @@ export default function MintPage() {
           <section className="space-y-6">
             <div className="space-y-3">
               <Badge className="bg-emerald-100 text-emerald-900 hover:bg-emerald-100">passport issuance</Badge>
-              <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">Issue a soul-bound passport on Aptos.</h1>
+              <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">Issue a soul-bound passport on Stellar.</h1>
               <p className="max-w-2xl text-lg leading-8 text-muted-foreground">
-                This console prepares a transaction for the Aptos Move passport module. Issued passports are tied to a
-                single owner, mapped to a QR payload, and can be verified trustlessly on chain.
+                This console prepares a transaction payload for a Stellar Soroban passport contract. Issued passports are
+                tied to a single owner, mapped to a QR payload, and can be verified trustlessly on chain.
               </p>
             </div>
 
@@ -196,8 +194,8 @@ export default function MintPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="owner">Passport holder address</Label>
-                  <Input id="owner" value={ownerAddress} onChange={(event) => setOwnerAddress(event.target.value)} placeholder="0x..." />
-                  <p className="text-xs text-muted-foreground">The passport is soul-bound to this Aptos address.</p>
+                  <Input id="owner" value={ownerAddress} onChange={(event) => setOwnerAddress(event.target.value)} placeholder="G..." />
+                  <p className="text-xs text-muted-foreground">The passport is soul-bound to this Stellar address.</p>
                 </div>
 
                 <div className="grid gap-5 sm:grid-cols-2">
@@ -238,7 +236,7 @@ export default function MintPage() {
               <CardContent className="space-y-4">
                 <div className="rounded-2xl border border-border bg-muted/40 p-4">
                   <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Issuer</p>
-                  <p className="mt-2 font-medium">{activeWallet ? `${activeWallet.name === "petra" ? "Petra" : "Martian"} ${shortenAddress(activeWallet.address)}` : "No wallet connected"}</p>
+                  <p className="mt-2 font-medium">{activeWallet ? `${getWalletLabel(activeWallet.name)} ${shortenAddress(activeWallet.address)}` : "No wallet connected"}</p>
                 </div>
                 <div className="rounded-2xl border border-border bg-muted/40 p-4">
                   <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Passport type</p>
@@ -254,7 +252,7 @@ export default function MintPage() {
                 <div className="rounded-2xl border border-dashed border-border p-4">
                   <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Blockchain interaction</p>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    The transaction payload targets the Aptos Move passport module and can be submitted by an allowlisted issuer.
+                    The transaction payload targets the Stellar Soroban passport contract and can be submitted by an allowlisted issuer.
                   </p>
                 </div>
               </CardContent>
@@ -306,7 +304,7 @@ export default function MintPage() {
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm text-muted-foreground">
                   <p>1. Select a passport type and use case.</p>
-                  <p>2. Connect an Aptos wallet with issuer permissions.</p>
+                  <p>2. Connect a Stellar wallet with issuer permissions.</p>
                   <p>3. Submit the issue call to create a soul-bound passport resource.</p>
                 </CardContent>
               </Card>

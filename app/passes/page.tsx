@@ -53,7 +53,7 @@ export default function PassesPage() {
           <Badge className="bg-emerald-100 text-emerald-900 hover:bg-emerald-100">holder inventory</Badge>
           <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">Issued passports and QR payloads.</h1>
           <p className="text-lg leading-8 text-muted-foreground">
-            Each passport record is a soul-bound Aptos resource. Holders can present the QR payload while inspectors
+            Each passport record is a soul-bound Stellar credential. Holders can present the QR payload while inspectors
             verify validity on chain.
           </p>
         </div>

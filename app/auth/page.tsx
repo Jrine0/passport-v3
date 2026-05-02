@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 const accessPaths = [
   {
     title: "Issuers",
-    description: "Create and revoke passports using allowlisted Aptos signer capabilities.",
+    description: "Create and revoke passports using allowlisted Stellar signer capabilities.",
   },
   {
     title: "Inspectors",
@@ -40,7 +40,7 @@ export default function AuthPage() {
           </Link>
           <Badge variant="secondary" className="gap-2">
             <Sparkles className="h-3.5 w-3.5" />
-            Petra and Martian
+            Freighter and Albedo
           </Badge>
         </div>
       </header>
@@ -48,13 +48,13 @@ export default function AuthPage() {
       <main className="container mx-auto grid gap-8 px-4 py-12 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
         <section className="space-y-6">
           <div className="space-y-4">
-            <Badge className="bg-emerald-100 text-emerald-900 hover:bg-emerald-100">Aptos wallet flow</Badge>
+            <Badge className="bg-emerald-100 text-emerald-900 hover:bg-emerald-100">Stellar wallet flow</Badge>
             <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
               Connect the wallet that will issue or inspect passports.
             </h1>
             <p className="text-lg leading-8 text-muted-foreground">
-              Use Petra or Martian to sign Aptos Move transactions. Issuer and inspector privileges are enforced by the
-              on-chain capability model, not by the UI.
+              Use Freighter or Albedo to sign Stellar transactions. Issuer and inspector privileges are enforced by the
+              on-chain contract model, not by the UI.
             </p>
           </div>
 
@@ -100,7 +100,7 @@ export default function AuthPage() {
               <Badge className="w-fit bg-white/10 text-white hover:bg-white/10">Operating model</Badge>
               <CardTitle className="text-2xl text-white">Capability-gated by design</CardTitle>
               <CardDescription className="text-white/70">
-                The UI never decides who can issue or inspect. Aptos resources do.
+                The UI never decides who can issue or inspect. Stellar contract state does.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">

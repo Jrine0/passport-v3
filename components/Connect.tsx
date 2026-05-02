@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { connectWallet, disconnectWallet, getWalletStatus, shortenAddress, type WalletName } from "@/lib/passport"
+import { connectWallet, disconnectWallet, getWalletLabel, getWalletStatus, shortenAddress, type WalletName } from "@/lib/passport"
 
 export default function Connect() {
   const [activeWallet, setActiveWallet] = useState<WalletName | null>(null)
@@ -53,7 +53,7 @@ export default function Connect() {
         <div>
           <p className="text-sm text-muted-foreground">Connected wallet</p>
           <p className="text-lg font-semibold text-foreground">
-            {activeWallet === "petra" ? "Petra" : "Martian"} {shortenAddress(walletAddress)}
+            {getWalletLabel(activeWallet)} {shortenAddress(walletAddress)}
           </p>
         </div>
         <Button onClick={handleDisconnect} variant="outline" className="bg-transparent">
@@ -66,15 +66,15 @@ export default function Connect() {
   return (
     <div className="space-y-4 rounded-2xl border border-border bg-card/90 p-4 shadow-sm">
       <div className="grid gap-3 sm:grid-cols-2">
-        <Button onClick={() => handleConnect("petra")} disabled={loadingWallet !== null} className="gap-2">
-          {loadingWallet === "petra" ? "Connecting..." : "Connect Petra"}
+        <Button onClick={() => handleConnect("freighter")} disabled={loadingWallet !== null} className="gap-2">
+          {loadingWallet === "freighter" ? "Connecting..." : "Connect Freighter"}
         </Button>
-        <Button onClick={() => handleConnect("martian")} disabled={loadingWallet !== null} variant="outline" className="gap-2 bg-transparent">
-          {loadingWallet === "martian" ? "Connecting..." : "Connect Martian"}
+        <Button onClick={() => handleConnect("albedo")} disabled={loadingWallet !== null} variant="outline" className="gap-2 bg-transparent">
+          {loadingWallet === "albedo" ? "Connecting..." : "Connect Albedo"}
         </Button>
       </div>
       <p className="text-sm text-muted-foreground">
-        Use an injected Aptos wallet to issue passports, sign inspector actions, and keep the flow fully on chain.
+        Use a Stellar wallet to issue passports, sign inspector actions, and keep the flow fully on chain.
       </p>
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
     </div>

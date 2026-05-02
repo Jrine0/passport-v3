@@ -1,10 +1,10 @@
 # passport verification
 
-Aptos-based passport verification platform for soul-bound credentials, inspector validation, and QR-driven access flows.
+Stellar-based passport verification platform for soul-bound credentials, inspector validation, and QR-driven access flows.
 
 ## What it does
 
-- Issues non-transferable passport resources on Aptos Move
+- Issues non-transferable passport records through a Soroban smart contract
 - Verifies passport validity on chain
 - Supports issuer-controlled revocation
 - Uses QR-compatible passport IDs for scanners and mobile apps
@@ -14,18 +14,18 @@ Aptos-based passport verification platform for soul-bound credentials, inspector
 
 ### On-chain
 
-The Move package in `move/` models the access layer as resources:
+The Soroban Rust contract in `stellar-contract/` models the access layer:
 
-- `PassportVault` holds all passport records for an owner
-- `IssuerCap` and `InspectorCap` enforce capability-based permissions
-- Verification checks existence, expiry, and revocation directly on chain
-- Events are emitted for issuance, verification, and revocation
+- `create_vault` registers holder vaults
+- `authorize_issuer` and `authorize_inspector` gate permissions
+- `issue_passport`, `inspect_passport`, and `revoke_passport` drive lifecycle events
+- `is_valid_passport` and `get_passport` expose read-side verification helpers
 
 ### App
 
 The Next.js app provides:
 
-- Aptos wallet onboarding with Petra and Martian
+- Stellar wallet onboarding with Freighter and Albedo
 - Passport issuance UI
 - Inspector verification UI
 - Passport vault views with QR payloads
@@ -38,8 +38,9 @@ The upload endpoint stores passport assets locally under `public/uploads` during
 ## Environment variables
 
 ```bash
-NEXT_PUBLIC_APTOS_NETWORK=testnet
-NEXT_PUBLIC_APTOS_MODULE_ADDRESS=0x...
+NEXT_PUBLIC_STELLAR_NETWORK=testnet
+NEXT_PUBLIC_STELLAR_RPC_URL=https://soroban-testnet.stellar.org
+NEXT_PUBLIC_STELLAR_CONTRACT_ID=C...
 TUSKY_API_KEY=...
 TUSKY_VAULT_ID=...
 ```
@@ -51,12 +52,17 @@ pnpm install
 pnpm dev
 ```
 
-## Move package
+## Soroban contract
 
-The Move module is in `move/sources/passport.move`. Before deployment, replace the placeholder package address in `move/Move.toml` with your published Aptos account address.
+Build the contract WebAssembly from `stellar-contract/`:
+
+```bash
+cd stellar-contract
+cargo build --target wasm32-unknown-unknown --release
+```
 
 ## Notes
 
-- Passports are designed to be soul-bound and cannot be transferred by the UI or the Move API.
-- Verification is trustless because the status is derived from on-chain resource state.
-- Issuers and inspectors must claim their capabilities after allowlisting.
+- Passports are designed to be soul-bound and cannot be transferred by the UI or contract API.
+- Verification is trustless because the status is derived from on-chain contract state.
+- Issuers and inspectors must be allowlisted by the admin address.

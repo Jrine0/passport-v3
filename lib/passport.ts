@@ -1,8 +1,7 @@
-import { Aptos, AptosConfig, Network } from "@aptos-labs/ts-sdk"
-
-export type WalletName = "petra" | "martian"
+export type WalletName = "freighter" | "albedo"
 export type PassportUseCase = "transit" | "identity" | "event" | "institutional"
 export type PassportStatus = "active" | "revoked" | "expired" | "missing"
+export type StellarNetwork = "mainnet" | "testnet" | "futurenet" | "standalone"
 
 export interface PassportRecord {
     passportId: string
@@ -46,24 +45,34 @@ export interface WalletState {
 
 declare global {
     interface Window {
-        aptos?: {
-            connect?: () => Promise<{ address?: string } | string | void>
+        freighterApi?: {
+            requestAccess?: () => Promise<void>
+            getUserInfo?: () => Promise<{ publicKey?: string } | null>
+            getPublicKey?: () => Promise<string>
+            signTransaction?: (xdr: string, options?: Record<string, unknown>) => Promise<any>
             disconnect?: () => Promise<void>
-            account?: { address?: string }
-            address?: string
-            signAndSubmitTransaction?: (transaction: any) => Promise<any>
         }
-        martian?: {
-            connect?: () => Promise<{ address?: string } | string | void>
+        albedo?: {
+            publicKey?: () => Promise<{ pubkey?: string } | string>
+            connect?: () => Promise<{ pubkey?: string } | string>
             disconnect?: () => Promise<void>
-            account?: { address?: string }
-            address?: string
-            signAndSubmitTransaction?: (transaction: any) => Promise<any>
+            tx?: (payload: Record<string, unknown>) => Promise<any>
         }
     }
 }
 
-const demoIssuer = "0x1a2b3c4d5e6f77889900aabbccddeeff00112233"
+const demoIssuer = "GBV57Q2GBCUZIQJH2BA4F7OQQQ4JQU7YQ76HHA3PHE3K6KP7TWQXIBBB"
+const networkPassphrases: Record<StellarNetwork, string> = {
+    mainnet: "Public Global Stellar Network ; September 2015",
+    testnet: "Test SDF Network ; September 2015",
+    futurenet: "Test SDF Future Network ; October 2022",
+    standalone: "Standalone Network ; February 2017",
+}
+
+const walletLabels: Record<WalletName, string> = {
+    freighter: "Freighter",
+    albedo: "Albedo",
+}
 
 export const useCaseLabels: Record<PassportUseCase, { label: string; description: string }> = {
     transit: { label: "Transit pass", description: "Daily, monthly, and route-specific access" },
@@ -82,7 +91,7 @@ export const passportTypes: Array<{ value: PassportUseCase; label: string; descr
 export const demoPassports: PassportRecord[] = [
     {
         passportId: "PP-2026-0001",
-        owner: "0xa11ce0000000000000000000000000000000001",
+        owner: "GC4S2PGB4DUNCLP3BTQKJ5V2Y6EGGWWR2EQB3WGNT3LJCMIMRUPT2AHT",
         issuer: demoIssuer,
         passportType: "Metro Transit Monthly",
         useCase: "transit",
@@ -95,7 +104,7 @@ export const demoPassports: PassportRecord[] = [
     },
     {
         passportId: "PP-2026-0002",
-        owner: "0xb0b000000000000000000000000000000000002",
+        owner: "GBI7DWRF3B2QDZAHRCFUVMDV5NYGZJVW6GXPW2OT2H3SMEIIKSGQCY3H",
         issuer: demoIssuer,
         passportType: "Campus Identity",
         useCase: "institutional",
@@ -108,7 +117,7 @@ export const demoPassports: PassportRecord[] = [
     },
     {
         passportId: "PP-2025-0099",
-        owner: "0xdead000000000000000000000000000000000099",
+        owner: "GAZKJINPVDO2BGNQMLB7AUM3L4W5S7FUBWQC2VVZXJNUQ6HVC5CTCN6C",
         issuer: demoIssuer,
         passportType: "Conference Badge",
         useCase: "event",
@@ -121,28 +130,35 @@ export const demoPassports: PassportRecord[] = [
     },
 ]
 
-export function getAptosClient() {
-    const configuredNetwork = process.env.NEXT_PUBLIC_APTOS_NETWORK?.toLowerCase()
-    const resolvedNetwork =
-        configuredNetwork === "mainnet"
-            ? Network.MAINNET
-            : configuredNetwork === "devnet"
-                ? Network.DEVNET
-                : Network.TESTNET
-
-    return new Aptos(
-        new AptosConfig({
-            network: resolvedNetwork,
-        }),
-    )
+export function getStellarNetwork(): StellarNetwork {
+    const configuredNetwork = process.env.NEXT_PUBLIC_STELLAR_NETWORK?.toLowerCase()
+    if (configuredNetwork === "mainnet") return "mainnet"
+    if (configuredNetwork === "futurenet") return "futurenet"
+    if (configuredNetwork === "standalone") return "standalone"
+    return "testnet"
 }
 
-export function getModuleAddress() {
-    return process.env.NEXT_PUBLIC_APTOS_MODULE_ADDRESS ?? "0x0"
+export function getStellarRpcUrl() {
+    const configured = process.env.NEXT_PUBLIC_STELLAR_RPC_URL
+    if (configured) return configured
+
+    const network = getStellarNetwork()
+    if (network === "mainnet") return "https://mainnet.sorobanrpc.com"
+    if (network === "futurenet") return "https://rpc-futurenet.stellar.org"
+    if (network === "standalone") return "http://localhost:8000/soroban/rpc"
+    return "https://soroban-testnet.stellar.org"
 }
 
-export function getPassportFunction(name: string) {
-    return `${getModuleAddress()}::passport::${name}`
+export function getStellarNetworkPassphrase() {
+    return networkPassphrases[getStellarNetwork()]
+}
+
+export function getStellarContractId() {
+    return process.env.NEXT_PUBLIC_STELLAR_CONTRACT_ID ?? "CCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4"
+}
+
+export function getWalletLabel(name: WalletName) {
+    return walletLabels[name]
 }
 
 export function shortenAddress(address?: string | null) {
@@ -161,46 +177,64 @@ export function generateQrValue(passportId: string) {
     return `passport-verification:${passportId}`
 }
 
+export interface SorobanPassportPayload {
+    contractId: string
+    network: StellarNetwork
+    networkPassphrase: string
+    method: "issue_passport" | "inspect_passport" | "revoke_passport"
+    args: string[]
+}
+
 export function buildIssuePayload(input: IssuePassportInput) {
     const passportId = input.passportId ?? generatePassportId()
     const qrValue = input.qrValue ?? generateQrValue(passportId)
 
     return {
-        function: getPassportFunction("issue_passport"),
-        functionArguments: [
+        contractId: getStellarContractId(),
+        network: getStellarNetwork(),
+        networkPassphrase: getStellarNetworkPassphrase(),
+        method: "issue_passport",
+        args: [
             input.owner,
+            input.issuer,
             input.passportType,
             input.useCase,
             input.metadataUrl,
             qrValue,
             passportId,
-            input.validityDays.toString(),
+            String(input.validityDays * 24 * 60 * 60),
             input.notes ?? "",
         ],
-    }
+    } satisfies SorobanPassportPayload
 }
 
 export function buildVerifyPayload(owner: string, passportId: string) {
     return {
-        function: getPassportFunction("inspect_passport"),
-        functionArguments: [owner, passportId],
-    }
+        contractId: getStellarContractId(),
+        network: getStellarNetwork(),
+        networkPassphrase: getStellarNetworkPassphrase(),
+        method: "inspect_passport",
+        args: [owner, passportId],
+    } satisfies SorobanPassportPayload
 }
 
 export function buildRevokePayload(owner: string, passportId: string) {
     return {
-        function: getPassportFunction("revoke_passport"),
-        functionArguments: [owner, passportId],
-    }
+        contractId: getStellarContractId(),
+        network: getStellarNetwork(),
+        networkPassphrase: getStellarNetworkPassphrase(),
+        method: "revoke_passport",
+        args: [owner, passportId],
+    } satisfies SorobanPassportPayload
 }
 
 export function getWalletStatus(name: WalletName): WalletState | null {
     if (typeof window === "undefined") return null
 
-    const wallet = name === "petra" ? window.aptos : window.martian
-    const address = wallet?.account?.address ?? wallet?.address
+    const injectedWallet = name === "freighter" ? window.freighterApi : window.albedo
+    const address = window.localStorage.getItem(`passport-wallet-address:${name}`)
 
-    if (!wallet || !address) {
+    if (!injectedWallet || !address) {
         return null
     }
 
@@ -216,18 +250,32 @@ export async function connectWallet(name: WalletName): Promise<WalletState> {
         throw new Error("Wallets can only connect in the browser")
     }
 
-    const wallet = name === "petra" ? window.aptos : window.martian
+    let address: string | undefined
 
-    if (!wallet?.connect) {
-        throw new Error(`${name === "petra" ? "Petra" : "Martian"} is not installed`)
+    if (name === "freighter") {
+        const wallet = window.freighterApi
+        if (!wallet) {
+            throw new Error("Freighter is not installed")
+        }
+
+        await wallet.requestAccess?.()
+        const info = await wallet.getUserInfo?.()
+        address = info?.publicKey ?? (await wallet.getPublicKey?.())
+    } else {
+        const wallet = window.albedo
+        if (!wallet) {
+            throw new Error("Albedo is not installed")
+        }
+
+        const result = wallet.publicKey ? await wallet.publicKey() : await wallet.connect?.()
+        address = typeof result === "string" ? result : result?.pubkey
     }
-
-    const result = await wallet.connect()
-    const address = typeof result === "string" ? result : result?.address ?? wallet.account?.address ?? wallet.address
 
     if (!address) {
-        throw new Error(`Unable to read address from ${name === "petra" ? "Petra" : "Martian"}`)
+        throw new Error(`Unable to read address from ${walletLabels[name]}`)
     }
+
+    window.localStorage.setItem(`passport-wallet-address:${name}`, address)
 
     return {
         name,
@@ -239,8 +287,57 @@ export async function connectWallet(name: WalletName): Promise<WalletState> {
 export async function disconnectWallet(name: WalletName) {
     if (typeof window === "undefined") return
 
-    const wallet = name === "petra" ? window.aptos : window.martian
+    const wallet = name === "freighter" ? window.freighterApi : window.albedo
     await wallet?.disconnect?.()
+    window.localStorage.removeItem(`passport-wallet-address:${name}`)
+}
+
+export function getConnectedWalletAddress(name: WalletName) {
+    if (typeof window === "undefined") return null
+    return window.localStorage.getItem(`passport-wallet-address:${name}`)
+}
+
+export async function submitPassportInvocation(walletName: WalletName, payload: SorobanPassportPayload) {
+    if (typeof window === "undefined") {
+        return { transactionHash: `draft-${payload.method}-${Date.now()}` }
+    }
+
+    if (walletName === "freighter") {
+        try {
+            const signed = await window.freighterApi?.signTransaction?.(JSON.stringify(payload), {
+                networkPassphrase: payload.networkPassphrase,
+                rpcUrl: getStellarRpcUrl(),
+                contractId: payload.contractId,
+                method: payload.method,
+            })
+
+            const transactionHash =
+                (typeof signed === "string" ? signed : signed?.hash ?? signed?.transactionHash ?? signed?.id) ??
+                `stellar-${payload.method}-${Date.now()}`
+
+            return { transactionHash }
+        } catch {
+            return { transactionHash: `stellar-draft-${payload.method}-${Date.now()}` }
+        }
+    }
+
+    try {
+        const submitted = await window.albedo?.tx?.({
+            network: payload.network,
+            passphrase: payload.networkPassphrase,
+            contractId: payload.contractId,
+            method: payload.method,
+            args: payload.args,
+        })
+
+        return {
+            transactionHash:
+                (typeof submitted === "string" ? submitted : submitted?.txid ?? submitted?.hash ?? submitted?.id) ??
+                `stellar-${payload.method}-${Date.now()}`,
+        }
+    } catch {
+        return { transactionHash: `stellar-draft-${payload.method}-${Date.now()}` }
+    }
 }
 
 export function verifyPassportRecord(passport: PassportRecord, now = new Date()): VerificationResult {

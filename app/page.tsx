@@ -9,7 +9,7 @@ const pillars = [
   {
     icon: ShieldCheck,
     title: "Soul-bound passports",
-    description: "Passports live as non-transferable Aptos Move resources tied to a single owner address.",
+    description: "Passports live as non-transferable Stellar Soroban records tied to a single owner address.",
   },
   {
     icon: BadgeCheck,
@@ -53,11 +53,11 @@ export default function HomePage() {
             </div>
             <div>
               <p className="text-sm uppercase tracking-[0.35em] text-muted-foreground">passport verification</p>
-              <p className="text-lg font-semibold">Aptos passport system</p>
+              <p className="text-lg font-semibold">Stellar passport system</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Badge variant="secondary">Aptos Move</Badge>
+            <Badge variant="secondary">Stellar Soroban</Badge>
             <a href="/auth">
               <Button className="gap-2">
                 Open app
@@ -74,7 +74,7 @@ export default function HomePage() {
             <div className="space-y-4">
               <Badge className="w-fit bg-emerald-100 text-emerald-900 hover:bg-emerald-100">passport verification platform</Badge>
               <h1 className="max-w-3xl text-5xl font-semibold tracking-tight text-balance sm:text-6xl">
-                Issue, verify, and revoke identity-grade passports on Aptos.
+                Issue, verify, and revoke identity-grade passports on Stellar.
               </h1>
               <p className="max-w-2xl text-lg leading-8 text-muted-foreground text-balance">
                 A clean passport verification stack for transit, events, institutional access, and identity workflows.
@@ -119,7 +119,7 @@ export default function HomePage() {
                 Live passport workflow
               </Badge>
               <CardTitle className="text-2xl">Inspector snapshot</CardTitle>
-              <CardDescription>Example of what an inspector sees when verifying a passport on Aptos.</CardDescription>
+              <CardDescription>Example of what an inspector sees when verifying a passport on Stellar.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-5 p-6">
               <div className="grid gap-4 sm:grid-cols-2">

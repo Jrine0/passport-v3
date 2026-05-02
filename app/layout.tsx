@@ -9,7 +9,7 @@ const spaceGrotesk = Space_Grotesk({
 
 export const metadata = {
   title: 'passport verification',
-  description: 'Aptos-powered passport issuance and verification',
+  description: 'Stellar-powered passport issuance and verification',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
